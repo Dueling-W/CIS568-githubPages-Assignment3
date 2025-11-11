@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Academic Author Network</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="libs/d3.js"></script>
+    <script src="network.js"></script>
+
+</head>
+<body>
+    <h1>Academic Author Network</h1>
+    <h2>William Girard</h2>
+    <div id="tooltip"></div>
+
+    <div id="controls">
+        <div class="group">
+            <label for="charge">Charge</label>
+            <input id="charge" type="range" min="-100" max="0" step="1" value="0">
+            <span class="value" id="chargeVal">-30</span>
+        </div>
+
+        <div class="group">
+            <label for="collide">Collide&nbsp;R</label>
+            <input id="collide" type="range" min="0" max="10" step="1" value="8">
+            <span class="value" id="collideVal">1</span>
+        </div>
+
+        <div class="group">
+            <label for="linkStrength">Link&nbsp;Strength</label>
+            <input id="linkStrength" type="range" min="0" max="1" step="0.01" value="0.2">
+            <span class="value" id="linkStrengthVal">0.1</span>
+        </div>
+    </div>
+
+
+<script>
+    d3.json("data/author_network.json").then(function (data){
+        let svg = d3.select('body').append("svg").attr("viewBox","0 0 1000 800")
+
+        const tooltip = d3.select("#tooltip");
+
+        params = simulate(data,svg, tooltip); // initialize all elements once
+
+        // store vars needed to update graph when user changes the sliders
+        var simulation = params[0]
+        var scale_radius = params[1]
+        var node_degree = params[2]
+
+        // use getElementById to get current value from slider
+        const getVals = () => ({
+            charge: Number(document.getElementById("charge").value),
+            collide: Number(document.getElementById("collide").value),
+            linkStrength: Number(document.getElementById("linkStrength").value)
+        });
+
+        // update the value based on the slider
+        const updateLabels = () => {
+            document.getElementById("chargeVal").textContent = document.getElementById("charge").value;
+            document.getElementById("collideVal").textContent = document.getElementById("collide").value;
+            document.getElementById("linkStrengthVal").textContent = (+document.getElementById("linkStrength").value).toFixed(2);
+        };
+
+        // update the forces in the simulation
+        function updateForces(simulation, scale_radius, node_degree, {charge, collide, linkStrength}) {
+            simulation
+                .force('charge',  d3.forceManyBody().strength(charge))
+                .force('collide', d3.forceCollide().radius(d => scale_radius(node_degree[d.id]) * collide))
+                .force('link',    d3.forceLink(data.links).id(d => d.id).strength(linkStrength));
+
+            simulation.alpha(1).restart(); // set alpha (cooling parameters) back to 1 to restart force sim
+        }
+
+        ["charge","collide","linkStrength"].forEach(id => {
+            const el = document.getElementById(id);
+
+            // show label while user drags
+            el.addEventListener("input", updateLabels, { passive: true });
+
+            // run sim once user stops dragging the mouse
+            el.addEventListener("change", () => {
+                const { charge, collide, linkStrength } = getVals();
+                updateForces(simulation, scale_radius, node_degree, {charge, collide, linkStrength})
+            });
+        });
+        
+
+
+        
+
+
+    })
+
+
+</script>
+
+</body>
+</html>
